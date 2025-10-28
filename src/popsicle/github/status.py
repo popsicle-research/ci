@@ -13,7 +13,7 @@ LOGGER = logging.getLogger(__name__)
 TargetURLBuilder = Callable[[int], str | None]
 
 def build_pipeline_url(pipeline_id: int) -> str:
-    return f"http://localhost:5000/ui/pipelines/{pipeline_id}"
+    return f"http://127.0.0.1:5000/ui/pipelines/{pipeline_id}"
 
 class GitHubStatusReporter:
     """Post commit statuses to GitHub's Status API."""

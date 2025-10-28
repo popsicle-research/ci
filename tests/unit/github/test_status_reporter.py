@@ -47,7 +47,7 @@ def test_successful_post_uses_expected_payload(monkeypatch: pytest.MonkeyPatch) 
     reporter = GitHubStatusReporter(
         session=session,
         context="ci/test",
-        target_url_builder=lambda pipeline_id: f"http://localhost:5000/ui/pipelines/{pipeline_id}",
+        target_url_builder=lambda pipeline_id: f"http://127.0.0.1:5000/ui/pipelines/{pipeline_id}",
     )
 
     result = reporter.report_success("acme/widget", "deadbeef", 7, description="All jobs green")
@@ -65,7 +65,7 @@ def test_successful_post_uses_expected_payload(monkeypatch: pytest.MonkeyPatch) 
         "state": "success",
         "context": "ci/test",
         "description": "All jobs green",
-        "target_url": "http://localhost:5000/ui/pipelines/7",
+        "target_url": "http://127.0.0.1:5000/ui/pipelines/7",
     }
 
 
