@@ -10,7 +10,6 @@ import requests
 
 LOGGER = logging.getLogger(__name__)
 
-
 TargetURLBuilder = Callable[[int], str | None]
 
 def build_pipeline_url(pipeline_id: int) -> str:
