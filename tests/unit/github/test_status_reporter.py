@@ -6,7 +6,7 @@ from typing import Any, Callable
 
 import pytest
 
-from fmg.github import GitHubStatusReporter
+from popsicle.github import GitHubStatusReporter
 
 
 class DummyResponse:

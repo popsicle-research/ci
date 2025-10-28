@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from fmg.pipelines import (
+from popsicle.pipelines import (
     CONFIG_RELATIVE_PATH,
     JobSpec,
     PipelineConfigError,

@@ -10,10 +10,10 @@ from typing import Callable
 import pytest
 from flask import Flask
 
-from fmg.orchestrator import PipelineOrchestrator
-from fmg.runner import RunnerResult
-from fmg.storage.sqlite import SQLiteStore
-from fmg.webhook.app import create_app
+from popsicle.orchestrator import PipelineOrchestrator
+from popsicle.runner import RunnerResult
+from popsicle.storage.sqlite import SQLiteStore
+from popsicle.webhook.app import create_app
 
 
 class RecordingOrchestrator(PipelineOrchestrator):

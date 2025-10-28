@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 from flask import Flask
 
-from fmg.storage.sqlite import SQLiteStore
-from fmg.webui import register_ui
+from popsicle.storage.sqlite import SQLiteStore
+from popsicle.webui import register_ui
 
 
 @pytest.fixture

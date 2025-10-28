@@ -1,4 +1,4 @@
-"""Server-rendered views for the FMG CI/CD dashboard."""
+"""Server-rendered views for the POPSICLE CI/CD dashboard."""
 
 from __future__ import annotations
 
@@ -16,14 +16,14 @@ from flask import (
     url_for,
 )
 
-from fmg.common.formatting import (
+from popsicle.common.formatting import (
     format_duration,
     format_timestamp,
     humanize_status,
     short_sha,
     status_badge_class,
 )
-from fmg.storage.sqlite import JobRecord, PipelineRecord, ProjectSummary, SQLiteStore
+from popsicle.storage.sqlite import JobRecord, PipelineRecord, ProjectSummary, SQLiteStore
 
 ui_bp = Blueprint("ui", __name__, url_prefix="/ui", template_folder="templates")
 
@@ -33,7 +33,7 @@ STATUS_FILTERS = ["running", "success", "failure", "pending"]
 
 
 def _get_store() -> SQLiteStore:
-    store = current_app.config.get("FMG_UI_STORE")
+    store = current_app.config.get("POPSICLE_UI_STORE")
     if store is None:
         raise RuntimeError("Web UI store not configured on application")
     return store

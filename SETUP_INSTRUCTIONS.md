@@ -1,6 +1,6 @@
-# FMG Platform Setup Guide
+# POPSICLE Platform Setup Guide
 
-This guide walks through connecting a real GitHub repository to the FMG CI/CD backend and preparing your local environment to execute pipelines inside Docker containers. The steps assume macOS on Apple Silicon (M1/M2) but notes are included for other Unix-like systems.
+This guide walks through connecting a real GitHub repository to the POPSICLE CI/CD backend and preparing your local environment to execute pipelines inside Docker containers. The steps assume macOS on Apple Silicon (M1/M2) but notes are included for other Unix-like systems.
 
 ## 1. Prerequisites
 
@@ -15,11 +15,11 @@ This guide walks through connecting a real GitHub repository to the FMG CI/CD ba
 3. **Networking utilities**
    - For local development, an HTTPS tunnel such as [ngrok](https://ngrok.com/) or [Cloudflare Tunnel](https://www.cloudflare.com/products/tunnel/) so GitHub can reach your workstation.
 
-## 2. Clone the FMG Backend
+## 2. Clone the POPSICLE Backend
 
 ```bash
-git clone https://github.com/schneiderl/fmg.git
-cd fmg
+git clone https://github.com/popsicle-research/ci.git
+cd ci
 ```
 
 If you already have the repository, pull the latest changes:
@@ -36,16 +36,16 @@ Create a `.env` file at the project root (or export variables in your shell prof
 
 ```bash
 # GitHub authentication used when cloning private repositories
-export FMG_GITHUB_TOKEN="<your-personal-access-token>"
+export POPSICLE_GITHUB_TOKEN="<your-personal-access-token>"
 
 # Token used when publishing commit statuses back to GitHub
 export GITHUB_TOKEN="<your-personal-access-token>"
 
 # Directory where cloned workspaces are staged
-export FMG_WORKSPACE_ROOT="$PWD/workspaces"
+export POPSICLE_WORKSPACE_ROOT="$PWD/workspaces"
 
-# Optional: URL the CLI should use to talk to a remote FMG server
-export FMG_SERVER_URL="http://localhost:5000"
+# Optional: URL the CLI should use to talk to a remote POPSICLE server
+export POPSICLE_SERVER_URL="http://localhost:5000"
 ```
 
 > **Tip:** Run `source .env` (or add these exports to `~/.zshrc`) before starting the backend.
@@ -60,7 +60,7 @@ To run ad-hoc commands, either use `poetry run <command>` or activate the Poetry
 
 ## 5. Prepare the Target GitHub Repository
 
-1. Add a `.popsicle/ci.yml` that FMG can parse. A minimal example:
+1. Add a `.popsicle/ci.yml` that POPSICLE can parse. A minimal example:
    ```yaml
    version: 2.1
    jobs:
@@ -87,7 +87,7 @@ To run ad-hoc commands, either use `poetry run <command>` or activate the Poetry
    ```
 2. Copy the generated HTTPS URL; GitHub requires HTTPS for webhooks.
 
-## 7. Launch the FMG Webhook Service
+## 7. Launch the POPSICLE Webhook Service
 
 Use the helper script to boot the Flask app:
 
@@ -95,7 +95,7 @@ Use the helper script to boot the Flask app:
 ./scripts/dev_up.sh
 ```
 
-This runs `poetry run flask --app fmg.webhook.app:app run --reload` on port 5000. Ensure Docker Desktop stays running so job containers can start when pipelines trigger.
+This runs `poetry run flask --app popsicle.webhook.app:app run --reload` on port 5000. Ensure Docker Desktop stays running so job containers can start when pipelines trigger.
 
 ## 8. Register the GitHub Webhook
 
@@ -103,9 +103,9 @@ This runs `poetry run flask --app fmg.webhook.app:app run --reload` on port 5000
 2. Click **Add webhook** and supply:
    - **Payload URL:** The HTTPS tunnel URL from step 6 suffixed with `/webhook` (e.g., `https://<subdomain>.ngrok.app/webhook`).
    - **Content type:** `application/json`.
-   - **Secret:** (Optional) Define a secret and set `GITHUB_WEBHOOK_SECRET` in FMG once HMAC validation is implemented.
+   - **Secret:** (Optional) Define a secret and set `GITHUB_WEBHOOK_SECRET` in POPSICLE once HMAC validation is implemented.
    - **Events:** Select **Just the push event**.
-3. Save the webhook. GitHub will send a ping event; FMG will respond with `ignored` because only push events are processed.
+3. Save the webhook. GitHub will send a ping event; POPSICLE will respond with `ignored` because only push events are processed.
 
 ## 9. Verify Docker Execution Capability
 
@@ -113,7 +113,7 @@ Before triggering real pipelines, confirm Docker works end-to-end:
 
 ```bash
 docker info
-poetry run python -m fmg.runner.diagnostics
+poetry run python -m popsicle.runner.diagnostics
 ```
 
 The diagnostics helper (if not yet implemented, run `docker run --rm hello-world`) ensures the Docker daemon responds and you can pull public images.
@@ -121,8 +121,8 @@ The diagnostics helper (if not yet implemented, run `docker run --rm hello-world
 ## 10. Trigger a Pipeline
 
 1. Push a new commit to the configured branch of your GitHub repository.
-2. Watch the FMG logs in your terminal. You should see the webhook intake, repository cloning, and job execution flow.
-3. Inspect the SQLite database (`data/fmg.db` by default) or forthcoming CLI/API commands to verify pipeline and job statuses. Use `poetry run pytest` to run the project's automated tests locally when developing changes.
+2. Watch the POPSICLE logs in your terminal. You should see the webhook intake, repository cloning, and job execution flow.
+3. Inspect the SQLite database (`data/popsicle.db` by default) or forthcoming CLI/API commands to verify pipeline and job statuses. Use `poetry run pytest` to run the project's automated tests locally when developing changes.
 
 ## 11. Running the Test Suite
 
@@ -138,6 +138,6 @@ This wrapper executes `poetry run pytest` and should pass before deploying chang
 
 - Periodically prune old workspaces (`rm -rf workspaces/*`) if pipelines fail before cleanup.
 - Keep Docker images updated with `docker system prune` and `docker pull <image>`.
-- For production deployment, place FMG behind a TLS-terminating proxy and persist the SQLite database on durable storage or migrate to a managed service.
+- For production deployment, place POPSICLE behind a TLS-terminating proxy and persist the SQLite database on durable storage or migrate to a managed service.
 
-Following these steps connects your GitHub repository to the FMG backend and ensures Docker-based job execution works reliably on your development machine.
+Following these steps connects your GitHub repository to the POPSICLE backend and ensures Docker-based job execution works reliably on your development machine.

@@ -1,4 +1,4 @@
-"""Command line interface for the FMG CI/CD platform."""
+"""Command line interface for the POPSICLE CI/CD platform."""
 
 from __future__ import annotations
 
@@ -9,12 +9,12 @@ import click
 import requests
 
 DEFAULT_SERVER_URL = "http://localhost:5000"
-SERVER_URL_ENV_VAR = "FMG_SERVER_URL"
+SERVER_URL_ENV_VAR = "POPSICLE_SERVER_URL"
 REQUEST_TIMEOUT_SECONDS = 10
 
 
 class APIClient:
-    """Small helper around HTTP requests to the FMG REST API."""
+    """Small helper around HTTP requests to the POPSICLE REST API."""
 
     def __init__(self, base_url: str) -> None:
         if not base_url:
@@ -93,11 +93,11 @@ def _format_runner_summary(runner: dict[str, Any]) -> str:
     envvar=SERVER_URL_ENV_VAR,
     default=DEFAULT_SERVER_URL,
     show_default=True,
-    help="Base URL for the FMG API server.",
+    help="Base URL for the POPSICLE API server.",
 )
 @click.pass_context
 def cli(ctx: click.Context, server_url: str) -> None:
-    """Interact with the FMG CI/CD platform."""
+    """Interact with the POPSICLE CI/CD platform."""
 
     ctx.obj = APIClient(server_url)
 
@@ -178,7 +178,7 @@ def configure() -> None:
 @click.argument("host")
 @click.pass_obj
 def add_runner(client: APIClient, host: str) -> None:
-    """Register a new runner host with the FMG server."""
+    """Register a new runner host with the POPSICLE server."""
 
     host_value = host.strip()
     if not host_value:

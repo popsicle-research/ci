@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from fmg.pipelines.config_parser import JobSpec
+from popsicle.pipelines.config_parser import JobSpec
 
 LOGGER = logging.getLogger(__name__)
 

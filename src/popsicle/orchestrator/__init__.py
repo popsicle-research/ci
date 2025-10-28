@@ -8,10 +8,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Sequence
 
-from fmg.github import GitHubStatusReporter
-from fmg.pipelines.config_parser import PipelineConfig
-from fmg.runner import DockerRunner, Runner
-from fmg.storage.sqlite import SQLiteStore
+from popsicle.github import GitHubStatusReporter
+from popsicle.pipelines.config_parser import PipelineConfig
+from popsicle.runner import DockerRunner, Runner
+from popsicle.storage.sqlite import SQLiteStore
 
 LOGGER = logging.getLogger(__name__)
 

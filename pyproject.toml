@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "fmg"
+name = "popsicle"
 version = "0.1.0"
 description = "Minimal CI/CD platform proof of concept"
-authors = ["FMG Project Contributors <ci@example.com>"]
+authors = ["Popsicle Project Contributors <ci@example.com>"]
 readme = "README.md"
-packages = [{ include = "fmg", from = "src" }]
+packages = [{ include = "popsicle", from = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -19,7 +19,7 @@ pytest = "^8.2"
 ruff = "^0.4"
 
 [tool.poetry.scripts]
-fmg = "fmg.cli.main:cli"
+popsicle = "popsicle.cli.main:cli"
 
 [build-system]
 requires = ["poetry-core>=1.5.0"]

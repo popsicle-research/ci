@@ -6,7 +6,7 @@ from typing import Iterable
 
 from flask import Flask, Response, jsonify, request
 
-from fmg.storage.sqlite import JobRecord, PipelineRecord, RunnerRecord, SQLiteStore
+from popsicle.storage.sqlite import JobRecord, PipelineRecord, RunnerRecord, SQLiteStore
 
 
 def register_api_routes(app: Flask, store: SQLiteStore) -> None:

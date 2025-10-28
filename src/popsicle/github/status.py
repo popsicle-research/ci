@@ -21,7 +21,7 @@ class GitHubStatusReporter:
         self,
         *,
         token: str | None = None,
-        context: str = "ci/fmg",
+        context: str = "popsicle/ci",
         api_base_url: str = "https://api.github.com",
         session: requests.Session | None = None,
         target_url_builder: TargetURLBuilder | None = None,

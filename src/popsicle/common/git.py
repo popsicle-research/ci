@@ -86,6 +86,6 @@ def _inject_token(clone_url: str, token: str | None) -> str:
         return clone_url
     if clone_url.startswith("https://"):
         prefix, remainder = clone_url.split("://", 1)
-        sanitized_token = os.environ.get("FMG_GITHUB_TOKEN", token)
+        sanitized_token = os.environ.get("POPSICLE_GITHUB_TOKEN", token)
         return f"{prefix}://{sanitized_token}@{remainder}"
     return clone_url

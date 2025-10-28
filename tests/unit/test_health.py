@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from flask import Flask
 
-from fmg.webhook.app import create_app
+from popsicle.webhook.app import create_app
 
 
 def test_health_endpoint_returns_ok() -> None:

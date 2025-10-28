@@ -1,4 +1,4 @@
-"""Flask application entrypoint for the FMG CI/CD webhook service."""
+"""Flask application entrypoint for the POPSICLE CI/CD webhook service."""
 
 from __future__ import annotations
 
@@ -9,17 +9,17 @@ from typing import Any, Callable
 
 from flask import Flask, jsonify, request
 
-from fmg.common.git import GitCloneError, clone_repository
-from fmg.github import GitHubStatusReporter
-from fmg.orchestrator import PipelineOrchestrator
-from fmg.pipelines.config_parser import (
+from popsicle.common.git import GitCloneError, clone_repository
+from popsicle.github import GitHubStatusReporter
+from popsicle.orchestrator import PipelineOrchestrator
+from popsicle.pipelines.config_parser import (
     PipelineConfig,
     PipelineConfigError,
     load_pipeline_config,
 )
-from fmg.api.routes import register_api_routes
-from fmg.storage.sqlite import SQLiteStore
-from fmg.webui import register_ui
+from popsicle.api.routes import register_api_routes
+from popsicle.storage.sqlite import SQLiteStore
+from popsicle.webui import register_ui
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,12 +49,12 @@ def create_app(
     config_loader = config_loader or load_pipeline_config
 
     workspace_base = Path(
-        workspace_root or os.getenv("FMG_WORKSPACE_ROOT", "workspaces")
+        workspace_root or os.getenv("POPSICLE_WORKSPACE_ROOT", "workspaces")
     ).resolve()
     workspace_base.mkdir(parents=True, exist_ok=True)
     app.config.setdefault("WORKSPACE_ROOT", workspace_base)
 
-    token = os.getenv("FMG_GITHUB_TOKEN")
+    token = os.getenv("POPSICLE_GITHUB_TOKEN")
 
     def perform_clone(
         repo_url: str, destination: Path, commit: str, branch: str
