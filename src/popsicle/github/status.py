@@ -13,6 +13,8 @@ LOGGER = logging.getLogger(__name__)
 
 TargetURLBuilder = Callable[[int], str | None]
 
+def build_pipeline_url(pipeline_id: int) -> str:
+    return f"http://localhost:5000/ui/pipelines/{pipeline_id}"
 
 class GitHubStatusReporter:
     """Post commit statuses to GitHub's Status API."""
@@ -30,7 +32,7 @@ class GitHubStatusReporter:
         self._context = context
         self._api_base = api_base_url.rstrip("/")
         self._session = session or requests.Session()
-        self._target_url_builder = target_url_builder
+        self._target_url_builder = build_pipeline_url
 
     def report_pending(
         self,
