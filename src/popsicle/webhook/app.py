@@ -212,6 +212,7 @@ def _spawn_thread(target: Callable[[], None]) -> None:
 
     thread = threading.Thread(target=target, daemon=True)
     thread.start()
+    
 
 
 app = create_app()
