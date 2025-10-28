@@ -1,0 +1,12 @@
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: mishaga/python:3.11-poetry
+    steps:
+      - run: poetry install
+      - run: poetry run pytest
+workflows:
+  build_and_test:
+    jobs:
+      - build

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}FMG CI Dashboard{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    {% block head %}{% endblock %}
+  </head>
+  <body class="bg-slate-50 min-h-screen text-slate-900">
+    <header class="bg-slate-900 text-white">
+      <nav class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <a href="{{ url_for('ui.list_projects') }}" class="text-lg font-semibold tracking-wide">FMG CI Dashboard</a>
+        <div class="space-x-4 text-sm">
+          <a href="{{ url_for('ui.list_projects') }}" class="hover:underline">Projects</a>
+        </div>
+      </nav>
+    </header>
+    <main class="max-w-6xl mx-auto px-4 py-6">
+      {% include '_flash.html' %}
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.env
+.venv
+.poetry
+poetry.lock
+.cache/
+.mypy_cache/
+.pytest_cache/
+.DS_Store
+.idea/
+data/
+workspaces/

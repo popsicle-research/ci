@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}{{ repo }} · Pipelines · FMG CI Dashboard{% endblock %}
+
+{% block content %}
+  <div class="mb-6">
+    <a href="{{ url_for('ui.list_projects') }}" class="text-sm text-slate-600 hover:text-slate-800">← Back to projects</a>
+    <h1 class="mt-2 text-2xl font-semibold text-slate-900">{{ repo }}</h1>
+  </div>
+
+  <form method="get" class="mb-6 flex flex-wrap gap-3 items-end bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+    <div>
+      <label for="status" class="block text-xs font-medium text-slate-600 uppercase tracking-wide mb-1">Status</label>
+      <select id="status" name="status" class="w-40 rounded border border-slate-300 px-3 py-2 text-sm">
+        <option value="" {% if not selected_status %}selected{% endif %}>All</option>
+        {% for status in status_filters %}
+          <option value="{{ status }}" {% if selected_status == status %}selected{% endif %}>{{ status|title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="branch" class="block text-xs font-medium text-slate-600 uppercase tracking-wide mb-1">Branch</label>
+      <select id="branch" name="branch" class="w-40 rounded border border-slate-300 px-3 py-2 text-sm">
+        <option value="" {% if not selected_branch %}selected{% endif %}>All</option>
+        {% for branch in branches %}
+          <option value="{{ branch }}" {% if selected_branch == branch %}selected{% endif %}>{{ branch }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="per_page" class="block text-xs font-medium text-slate-600 uppercase tracking-wide mb-1">Per page</label>
+      <input id="per_page" name="per_page" type="number" min="1" max="100" value="{{ per_page }}"
+             class="w-24 rounded border border-slate-300 px-3 py-2 text-sm" />
+    </div>
+    <div>
+      <button type="submit" class="inline-flex items-center rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
+        Apply
+      </button>
+    </div>
+  </form>
+
+  {% if not pipelines %}
+    {% set message = 'No pipelines match the selected filters yet.' %}
+    {% include '_empty_state.html' %}
+  {% else %}
+    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+      <table class="min-w-full divide-y divide-slate-200">
+        <thead class="bg-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+          <tr>
+            <th class="px-4 py-3">Pipeline</th>
+            <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3">Branch</th>
+            <th class="px-4 py-3">Commit</th>
+            <th class="px-4 py-3">Started</th>
+            <th class="px-4 py-3">Completed</th>
+            <th class="px-4 py-3 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 text-sm">
+          {% for pipeline in pipelines %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3 font-mono text-xs text-slate-600">#{{ pipeline.id }}</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ pipeline.status_class }}">
+                  {{ pipeline.status }}
+                </span>
+              </td>
+              <td class="px-4 py-3 font-mono text-xs text-slate-600">{{ pipeline.branch }}</td>
+              <td class="px-4 py-3 font-mono text-xs text-slate-600" title="{{ pipeline.full_commit }}">{{ pipeline.commit_sha }}</td>
+              <td class="px-4 py-3">{{ pipeline.start_time }}</td>
+              <td class="px-4 py-3">{{ pipeline.end_time }}</td>
+              <td class="px-4 py-3 text-right">
+                <a href="{{ url_for('ui.pipeline_details', pipeline_id=pipeline.id) }}"
+                   class="text-sm font-medium text-slate-900 hover:underline">View details</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-4 flex items-center justify-between text-sm text-slate-600">
+      <div>
+        Page {{ page }}{% if total_pages %} of {{ total_pages }}{% endif %} · {{ total }} total pipelines
+      </div>
+      <div class="space-x-2">
+        {% set prev_disabled = page <= 1 %}
+        {% set next_disabled = total_pages and page >= total_pages %}
+        <a href="{{ url_for('ui.project_pipelines', repo=repo, page=page-1, status=selected_status or None, branch=selected_branch or None, per_page=per_page) }}"
+           class="inline-flex items-center rounded border px-3 py-1 {{ 'border-slate-200 text-slate-300 cursor-not-allowed' if prev_disabled else 'border-slate-300 text-slate-700 hover:bg-slate-100' }}"
+           aria-disabled="{{ 'true' if prev_disabled else 'false' }}">
+          « Prev
+        </a>
+        <a href="{{ url_for('ui.project_pipelines', repo=repo, page=page+1, status=selected_status or None, branch=selected_branch or None, per_page=per_page) }}"
+           class="inline-flex items-center rounded border px-3 py-1 {{ 'border-slate-200 text-slate-300 cursor-not-allowed' if next_disabled else 'border-slate-300 text-slate-700 hover:bg-slate-100' }}"
+           aria-disabled="{{ 'true' if next_disabled else 'false' }}">
+          Next »
+        </a>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

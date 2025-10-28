@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "fmg"
+version = "0.1.0"
+description = "Minimal CI/CD platform proof of concept"
+authors = ["FMG Project Contributors <ci@example.com>"]
+readme = "README.md"
+packages = [{ include = "fmg", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+flask = "^3.0"
+pyyaml = "^6.0"
+click = "^8.1"
+docker = "^6.1"
+requests = "^2.31"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2"
+ruff = "^0.4"
+
+[tool.poetry.scripts]
+fmg = "fmg.cli.main:cli"
+
+[build-system]
+requires = ["poetry-core>=1.5.0"]
+build-backend = "poetry.core.masonry.api"
