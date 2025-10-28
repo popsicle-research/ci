@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from fmg.orchestrator import PipelineOrchestrator
-from fmg.pipelines.config_parser import JobSpec, PipelineConfig, StepSpec
-from fmg.storage.sqlite import SQLiteStore
-from fmg.runner import RunnerResult
+from popsicle.orchestrator import PipelineOrchestrator
+from popsicle.pipelines.config_parser import JobSpec, PipelineConfig, StepSpec
+from popsicle.storage.sqlite import SQLiteStore
+from popsicle.runner import RunnerResult
 
 
 @pytest.fixture()

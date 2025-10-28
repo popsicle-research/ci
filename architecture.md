@@ -2,16 +2,16 @@
 
 ## Components
 
-- **Webhook Service** (`src/fmg/webhook/`): Flask-based HTTP server that will receive GitHub events and expose additional APIs.
-- **Orchestrator** (`src/fmg/orchestrator/`): Coordinates pipeline execution, ensuring jobs run in the correct order and tracking their progress.
-- **Runner** (`src/fmg/runner/`): Executes job steps inside ephemeral Docker containers to provide isolation from the host.
-- **Pipelines** (`src/fmg/pipelines/`): Logic for parsing CI configuration files and mapping them to executable pipelines.
-- **Common Utilities** (`src/fmg/common/`): Shared helpers such as configuration loading, logging, path management, and
+- **Webhook Service** (`src/popsicle/webhook/`): Flask-based HTTP server that will receive GitHub events and expose additional APIs.
+- **Orchestrator** (`src/popsicle/orchestrator/`): Coordinates pipeline execution, ensuring jobs run in the correct order and tracking their progress.
+- **Runner** (`src/popsicle/runner/`): Executes job steps inside ephemeral Docker containers to provide isolation from the host.
+- **Pipelines** (`src/popsicle/pipelines/`): Logic for parsing CI configuration files and mapping them to executable pipelines.
+- **Common Utilities** (`src/popsicle/common/`): Shared helpers such as configuration loading, logging, path management, and
   presentation-friendly formatting helpers in `formatting.py`.
-- **CLI** (`src/fmg/cli/`): Command-line interface for interacting with the platform (listing pipelines, inspecting logs, etc.).
-- **API Layer** (`src/fmg/api/`): Flask routes registered on the webhook app that expose
+- **CLI** (`src/popsicle/cli/`): Command-line interface for interacting with the platform (listing pipelines, inspecting logs, etc.).
+- **API Layer** (`src/popsicle/api/`): Flask routes registered on the webhook app that expose
   read-only REST endpoints for pipelines, jobs, logs, and runner metadata.
-- **Web UI** (`src/fmg/webui/`): Flask blueprint that renders Tailwind-styled Jinja templates for browsing projects,
+- **Web UI** (`src/popsicle/webui/`): Flask blueprint that renders Tailwind-styled Jinja templates for browsing projects,
   pipelines, and job logs without going through the JSON API.
 
 ## High-Level Flow
@@ -36,7 +36,7 @@
                                                ▼
                                    ┌──────────────────────┐
                                    │ Pipeline Parser      │
-                                   │ (.circleci/config.yml│
+                                   │ (.popsicle/ci.yml│
                                    └─────────┬────────────┘
                                              │
                                   writes pipeline/jobs rows
@@ -102,12 +102,12 @@ designed for consumption by internal tools such as the CLI.
 
 - **Framework**: Implemented with Click for structured commands and help text.
 - **Server Targeting**: Reads the API base URL from the `--server-url` option or
-  the `FMG_SERVER_URL` environment variable (defaults to
+  the `popsicle_SERVER_URL` environment variable (defaults to
   `http://localhost:5000`).
-- **Pipeline Monitoring**: `fmg list` renders recent pipelines using the
-  `/pipelines` endpoint, while `fmg logs <pipeline_id> [job_name]` fetches job
+- **Pipeline Monitoring**: `popsicle list` renders recent pipelines using the
+  `/pipelines` endpoint, while `popsicle logs <pipeline_id> [job_name]` fetches job
   metadata then downloads log output from `/pipelines/<pipeline_id>/jobs/<id>/log`.
-- **Runner Configuration**: Subcommands under `fmg configure` call `/runners`
+- **Runner Configuration**: Subcommands under `popsicle configure` call `/runners`
   endpoints to register hosts (`add-runner`) and inspect current entries
   (`list-runners`).
 - **Error Handling**: API responses are validated and surfaced to the user via
@@ -133,9 +133,9 @@ designed for consumption by internal tools such as the CLI.
 
 ## Orchestrator & Runner Execution Model
 
-- **Sequential Scheduling**: `PipelineOrchestrator` (`src/fmg/orchestrator/`) receives the parsed `PipelineConfig`, selects the dependency-respecting job order emitted by the parser, and updates the SQLite store as each job transitions through `pending → running → success/failure`. Jobs execute on dedicated background threads spawned by the webhook handler, allowing multiple pipelines to progress concurrently without blocking HTTP requests.
+- **Sequential Scheduling**: `PipelineOrchestrator` (`src/popsicle/orchestrator/`) receives the parsed `PipelineConfig`, selects the dependency-respecting job order emitted by the parser, and updates the SQLite store as each job transitions through `pending → running → success/failure`. Jobs execute on dedicated background threads spawned by the webhook handler, allowing multiple pipelines to progress concurrently without blocking HTTP requests.
 - **Fail-Fast Semantics**: If a job fails or the runner raises an exception, the orchestrator records the failure, marks remaining queued jobs as `skipped`, and finalises the pipeline with a `failure` status. Successful pipelines auto-populate completion timestamps when status becomes `success`.
-- **Docker Runner**: The orchestrator delegates to `DockerRunner` (`src/fmg/runner/`) which converts each job into a single `docker run` invocation. The runner mounts the cloned repository into `/workspace` inside the container, concatenates each `run` step into a `sh -c` command guarded with `set -eo pipefail`, and captures combined stdout/stderr for persistence. `checkout` steps remain a no-op because the workspace is already present on disk. Non-zero exit codes propagate failure upstream and the entire container is removed after execution so no stopped containers accumulate.
+- **Docker Runner**: The orchestrator delegates to `DockerRunner` (`src/popsicle/runner/`) which converts each job into a single `docker run` invocation. The runner mounts the cloned repository into `/workspace` inside the container, concatenates each `run` step into a `sh -c` command guarded with `set -eo pipefail`, and captures combined stdout/stderr for persistence. `checkout` steps remain a no-op because the workspace is already present on disk. Non-zero exit codes propagate failure upstream and the entire container is removed after execution so no stopped containers accumulate.
 - **Workspace Cleanup**: After a pipeline finishes—successfully or due to failure—the orchestrator removes the temporary workspace directory to prevent disk growth. Cleanup failures are logged as warnings without interrupting pipeline status updates.
 - **Thread-Safe Persistence**: Each runner update performs its own SQLite transaction, so concurrent pipelines simply serialize writes through the database file locks. This keeps the design simple without explicit locks in Python.
 
@@ -153,7 +153,7 @@ designed for consumption by internal tools such as the CLI.
 
 ## Pipeline Configuration Parsing
 
-- **Configuration Location**: Repositories declare pipelines in `.circleci/config.yml`. When a webhook event is processed, the pipelines module reads this file from the cloned repository workspace.
+- **Configuration Location**: Repositories declare pipelines in `.popsicle/ci.yml`. When a webhook event is processed, the pipelines module reads this file from the cloned repository workspace.
 - **Supported Structure**: The YAML file must provide a `jobs` mapping where each job defines at least one Docker image (using the first image as the execution environment) and a `steps` list. Supported steps include `checkout` (a no-op placeholder inside the container) and `run` commands specified either as strings or with a `command` field.
 - **Workflows**: A `workflows` section may be included to describe job ordering using a CircleCI-style `requires` list. The parser performs a topological sort to derive the sequential execution order and validate dependencies.
 - **Validation & Errors**: Malformed configurations (missing files, unsupported step types, or unresolved dependencies) raise `PipelineConfigError`, allowing the webhook handler/orchestrator to surface configuration issues as pipeline failures.
@@ -162,7 +162,7 @@ designed for consumption by internal tools such as the CLI.
 ## Operational Considerations
 
 - **Environment Variables**: Runtime behaviour can be adjusted via
-  `FMG_WORKSPACE_ROOT` (workspace location), `FMG_SERVER_URL` (CLI default),
+  `popsicle_WORKSPACE_ROOT` (workspace location), `popsicle_SERVER_URL` (CLI default),
   `PORT` (Flask server port), and `GITHUB_TOKEN` (commit status updates). A
   `WEBHOOK_SECRET` can be introduced when GitHub signature verification is
   implemented.
@@ -172,15 +172,15 @@ designed for consumption by internal tools such as the CLI.
 - **Testing Strategy**: Unit tests cover the orchestrator, parser, storage
   helpers, and CLI. Integration tests simulate webhook-to-runner flows. The test
   suite runs via `poetry run pytest` and targets ≥85% coverage across
-  `src/fmg/`.
+  `src/popsicle/`.
 
 ## Persistence Layer
 
-- **SQLite Store**: A lightweight SQLite database (`data/fmg.db` by default) holds runtime state. The schema includes:
+- **SQLite Store**: A lightweight SQLite database (`data/popsicle.db` by default) holds runtime state. The schema includes:
   - `pipelines`: Tracks pipeline executions with repository, commit SHA, branch, status, and timestamps. Status transitions are recorded as pipelines advance.
   - `jobs`: Stores job executions linked to their parent pipeline (foreign key with cascading delete). Each job records its status timeline and aggregated log output.
   - `runners`: Configures known runner hosts along with an `active` flag, preparing for remote execution capabilities.
-- **Access API**: The `SQLiteStore` helper (`src/fmg/storage/sqlite.py`) lazily initializes the schema and exposes CRUD helpers (`create_pipeline`, `create_job`, `update_*`, `set_job_log`, `list_runners`, etc.). Timestamps default to UTC ISO-8601 strings to simplify ordering and external presentation. Additional aggregate helpers surface project summaries, distinct branches, and paginated pipeline listings for the Web UI.
+- **Access API**: The `SQLiteStore` helper (`src/popsicle/storage/sqlite.py`) lazily initializes the schema and exposes CRUD helpers (`create_pipeline`, `create_job`, `update_*`, `set_job_log`, `list_runners`, etc.). Timestamps default to UTC ISO-8601 strings to simplify ordering and external presentation. Additional aggregate helpers surface project summaries, distinct branches, and paginated pipeline listings for the Web UI.
 - **Usage**: Downstream components obtain pipeline/job IDs immediately after webhook processing, then update statuses and logs as orchestration progresses. Query helpers (e.g., `get_recent_pipelines`, `get_jobs_for_pipeline`, `get_project_summaries`) power the REST API and UI. Supporting indexes on repository and branch columns keep dashboard navigation responsive even with larger histories.
 
 ## Technology Selections
@@ -206,16 +206,16 @@ designed for consumption by internal tools such as the CLI.
 - **Payload Processing**:
   - Repository metadata, commit SHA (`after`), and ref are validated from the payload. Missing fields return a 400 error.
   - A pipeline record is created immediately in SQLite, capturing repository, commit, branch, and timestamps.
-  - The repository is cloned into a deterministic workspace directory (`workspaces/pipeline-<id>` by default; configurable through `FMG_WORKSPACE_ROOT`). Private repositories can set `FMG_GITHUB_TOKEN` to allow authenticated clones.
-  - After checkout, `.circleci/config.yml` is parsed via the pipelines module. Validation errors mark the pipeline as failed while still returning HTTP 200 to prevent webhook retries. Failures include cloning errors, missing configs, or unsupported syntax.
+  - The repository is cloned into a deterministic workspace directory (`workspaces/pipeline-<id>` by default; configurable through `popsicle_WORKSPACE_ROOT`). Private repositories can set `popsicle_GITHUB_TOKEN` to allow authenticated clones.
+  - After checkout, `.popsicle/ci.yml` is parsed via the pipelines module. Validation errors mark the pipeline as failed while still returning HTTP 200 to prevent webhook retries. Failures include cloning errors, missing configs, or unsupported syntax.
   - Job rows are pre-created for every job declared in the configuration so downstream consumers can display queued work.
 - **Asynchronous Execution**: Once preparation is successful, the orchestrator is invoked on a background thread. The webhook response immediately returns `{ "status": "queued", "pipeline_id": <id> }`, allowing GitHub to finish the request quickly while execution continues.
 - **Commit Status Reporting**:
-  - `GitHubStatusReporter` (`src/fmg/github/status.py`) posts commit statuses to `https://api.github.com/repos/<owner>/<repo>/statuses/<sha>` using the REST v3 API.
+  - `GitHubStatusReporter` (`src/popsicle/github/status.py`) posts commit statuses to `https://api.github.com/repos/<owner>/<repo>/statuses/<sha>` using the REST v3 API.
   - When a pipeline is enqueued the webhook posts a `pending` status so the originating commit immediately reflects that work is in progress. Clone/configuration failures short-circuit with a `failure` status describing the issue.
   - The orchestrator emits `pending`, `success`, or `failure` updates as the pipeline lifecycle progresses. Success messages include the job count; failure messages identify the job that failed when available.
   - Status updates require a Personal Access Token exported as `GITHUB_TOKEN` with `repo:status` scope. If the token is missing or an API call fails the pipeline still runs, but the reporter logs a warning and skips the update.
-  - A configurable `context` (`ci/fmg` by default) keeps our statuses grouped on GitHub. Future deployments can provide a `target_url` builder to deep-link to pipeline details.
+  - A configurable `context` (`ci/popsicle` by default) keeps our statuses grouped on GitHub. Future deployments can provide a `target_url` builder to deep-link to pipeline details.
 - **Workspace Lifecycle**: Each pipeline owns its own directory under the workspace root. Once orchestration completes, the runner signals finish and the orchestrator deletes the workspace directory to control disk usage.
 - **Security & Logging**: HMAC validation is not yet enforced; document that a GitHub webhook secret should be configured before production use. Logs include repository and pipeline identifiers to aid troubleshooting without leaking credentials.
 

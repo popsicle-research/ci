@@ -1,7 +1,7 @@
 import sqlite3
 from pathlib import Path
 
-from fmg.storage import SQLiteStore
+from popsicle.storage import SQLiteStore
 
 
 def test_initializes_schema(tmp_path: Path) -> None:

@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from fmg.pipelines.config_parser import JobSpec, StepSpec
-from fmg.runner import DockerRunner
+from popsicle.pipelines.config_parser import JobSpec, StepSpec
+from popsicle.runner import DockerRunner
 
 
 def _job_with_steps(*commands: str) -> JobSpec:

@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 from click.testing import CliRunner
 
-from fmg.cli.main import cli
+from popsicle.cli.main import cli
 
 
 class DummyResponse:
@@ -54,7 +54,7 @@ def test_list_command_displays_pipelines(
             ]
         )
 
-    monkeypatch.setattr("fmg.cli.main.requests.get", fake_get)
+    monkeypatch.setattr("popsicle.cli.main.requests.get", fake_get)
 
     result = runner.invoke(cli, ["list"])
 
@@ -77,7 +77,7 @@ def test_logs_command_fetches_single_job_log(
             return DummyResponse(text="line1\nline2\n")
         pytest.fail(f"unexpected URL requested: {url}")
 
-    monkeypatch.setattr("fmg.cli.main.requests.get", fake_get)
+    monkeypatch.setattr("popsicle.cli.main.requests.get", fake_get)
 
     result = runner.invoke(cli, ["logs", "12"])
 
@@ -101,7 +101,7 @@ def test_logs_command_requires_job_name_when_multiple_jobs(
             }
         )
 
-    monkeypatch.setattr("fmg.cli.main.requests.get", fake_get)
+    monkeypatch.setattr("popsicle.cli.main.requests.get", fake_get)
 
     result = runner.invoke(cli, ["logs", "7"])
 
@@ -121,7 +121,7 @@ def test_logs_command_errors_for_missing_job(
             }
         )
 
-    monkeypatch.setattr("fmg.cli.main.requests.get", fake_get)
+    monkeypatch.setattr("popsicle.cli.main.requests.get", fake_get)
 
     result = runner.invoke(cli, ["logs", "9", "deploy"])
 
@@ -142,7 +142,7 @@ def test_configure_add_runner_posts_host(
             json_data={"id": 2, "host": "10.0.0.5", "active": True},
         )
 
-    monkeypatch.setattr("fmg.cli.main.requests.post", fake_post)
+    monkeypatch.setattr("popsicle.cli.main.requests.post", fake_post)
 
     result = runner.invoke(cli, ["configure", "add-runner", "10.0.0.5"])
 
@@ -162,7 +162,7 @@ def test_configure_list_runners_outputs_entries(
             ]
         )
 
-    monkeypatch.setattr("fmg.cli.main.requests.get", fake_get)
+    monkeypatch.setattr("popsicle.cli.main.requests.get", fake_get)
 
     result = runner.invoke(cli, ["configure", "list-runners"])
 

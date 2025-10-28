@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from flask import Flask
 
-from fmg.storage.sqlite import SQLiteStore
+from popsicle.storage.sqlite import SQLiteStore
 
 
 def _create_pipeline(

@@ -1,12 +1,12 @@
-# FMG CI/CD Platform
+# POPSICLE CI/CD Platform
 
 ## Introduction
 
-FMG is a minimal CI/CD platform that demonstrates the full lifecycle of running
+POPSICLE is a minimal CI/CD platform that demonstrates the full lifecycle of running
 continuous integration pipelines in response to GitHub events. The system:
 
 - Receives **GitHub push webhooks** and clones the referenced repository.
-- Parses **CircleCI-style pipeline definitions** stored at `.circleci/config.yml`.
+- Parses **CircleCI-style pipeline definitions** stored at `.popsicle/ci.yml`.
 - Executes jobs inside **ephemeral Docker containers** for isolation.
 - Stores pipeline, job, and log metadata in a **SQLite** database.
 - Updates **GitHub commit statuses** so authors can track progress inside the
@@ -70,23 +70,23 @@ Clone the repository and install dependencies. The platform ships with a
 **Using Poetry (recommended for contributors):**
 
 ```bash
-git clone https://github.com/schneiderl/fmg.git
-cd fmg
+git clone https://github.com/popsicle-research/ci.git
+cd ci
 poetry install
 ```
 
 **Using pip in a virtual environment (for operators running locally):**
 
 ```bash
-git clone https://github.com/schneiderl/fmg.git
-cd fmg
+git clone https://github.com/popsicle-research/ci.git
+cd ci
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install --upgrade pip
 pip install .
 ```
 
-The SQLite database is created on demand under `data/fmg.db`. No additional
+The SQLite database is created on demand under `data/popsicle.db`. No additional
 setup is required.
 
 ## Environment Variables
@@ -96,8 +96,8 @@ Configure these variables before launching the server or CLI when applicable:
 | Variable | Description |
 | --- | --- |
 | `GITHUB_TOKEN` | Optional. Personal access token with `repo:status` scope used to update commit statuses. When unset, status reporting is skipped with a warning log. |
-| `FMG_WORKSPACE_ROOT` | Optional. Directory where repositories are cloned and executed. Defaults to `workspaces/` inside the project directory. |
-| `FMG_SERVER_URL` | Optional. Base URL for the CLI to contact the API. Defaults to `http://localhost:5000`. |
+| `POPSICLE_WORKSPACE_ROOT` | Optional. Directory where repositories are cloned and executed. Defaults to `workspaces/` inside the project directory. |
+| `POPSICLE_SERVER_URL` | Optional. Base URL for the CLI to contact the API. Defaults to `http://localhost:5000`. |
 | `PORT` | Optional. Overrides the port used by the Flask server. |
 | `WEBHOOK_SECRET` | Not currently enforced. If you extend the webhook to validate signatures, set this to match your GitHub webhook secret. |
 
@@ -109,11 +109,11 @@ Launch the webhook receiver (which also registers the REST API routes) using
 Flask:
 
 ```bash
-poetry run flask --app src/fmg/webhook/app.py run --reload
+poetry run flask --app src/popsicle/webhook/app.py run --reload
 ```
 
 By default the server listens on `http://127.0.0.1:5000`. Set the `PORT`
-environment variable to override the port and `FMG_WORKSPACE_ROOT` to choose a
+environment variable to override the port and `POPSICLE_WORKSPACE_ROOT` to choose a
 custom directory for cloned repositories.
 
 ### Helper Scripts
@@ -129,38 +129,38 @@ Each script assumes a Poetry-managed virtual environment.
 
 ## Command Line Interface
 
-The `fmg` CLI interacts with the REST API. It is installed as part of the
+The `popsicle` CLI interacts with the REST API. It is installed as part of the
 project (entry point configured in `pyproject.toml`). When installed via Poetry
-use `poetry run fmg`, or if the package is installed in an active virtual
-environment the `fmg` command will be available directly. All commands accept
-the `--server-url` option or the `FMG_SERVER_URL` environment variable to
+use `poetry run popsicle`, or if the package is installed in an active virtual
+environment the `popsicle` command will be available directly. All commands accept
+the `--server-url` option or the `POPSICLE_SERVER_URL` environment variable to
 target a remote deployment.
 
 ### Global Options
 
 ```bash
-fmg --server-url http://ci.example.com:5000 <command>
+popsicle --server-url http://ci.example.com:5000 <command>
 ```
 
 If omitted, the CLI defaults to `http://localhost:5000`.
 
 ### Pipeline Commands
 
-- `fmg list` – display the most recent pipeline runs:
+- `popsicle list` – display the most recent pipeline runs:
 
   ```text
   #5 [octo/repo @ a1b2c3d on main] status: SUCCESS (started 2024-06-01T12:00:00Z finished 2024-06-01T12:03:40Z)
   #4 [octo/repo @ d4e5f6g on feature/login] status: FAILURE (started 2024-05-31T18:21:10Z)
   ```
 
-- `fmg logs <pipeline_id> [job_name]` – fetch logs for a pipeline job.
+- `popsicle logs <pipeline_id> [job_name]` – fetch logs for a pipeline job.
   - If the pipeline has exactly one job the CLI prints its log automatically.
   - When multiple jobs exist the CLI prompts for a specific job name.
 
   Example:
 
   ```bash
-  fmg logs 5 build
+  popsicle logs 5 build
   --- Log for pipeline 5, job "build" ---
   Installing dependencies...
   Running pytest...
@@ -170,9 +170,9 @@ If omitted, the CLI defaults to `http://localhost:5000`.
 
 Manage the `runners` table via the API:
 
-- `fmg configure add-runner <host>` – register a runner host. The API currently
+- `popsicle configure add-runner <host>` – register a runner host. The API currently
   stores metadata without provisioning remote agents.
-- `fmg configure list-runners` – list configured runners and their active state.
+- `popsicle configure list-runners` – list configured runners and their active state.
 
 Example output:
 
@@ -183,7 +183,7 @@ Example output:
 
 ## Pipeline Configuration
 
-Pipelines follow a CircleCI-style YAML schema placed at `.circleci/config.yml`
+Pipelines follow a CircleCI-style YAML schema placed at `.popsicle/ci.yml`
 in the target repository. A minimal example:
 
 ```yaml
@@ -211,7 +211,7 @@ At a glance, the platform connects GitHub, Docker, and the local database as
 follows:
 
 ```text
-[GitHub] --push webhook--> [FMG Webhook/API Server]
+[GitHub] --push webhook--> [POPSICLE Webhook/API Server]
     |                              |
     |                              |-- parses config --> [Pipeline Parser]
     |                              |-- enqueues jobs --> [Orchestrator]
@@ -269,7 +269,7 @@ continues without updating GitHub.
 ## End-to-End Manual Test
 
 1. **Prepare a sample repository** with the pipeline configuration shown above.
-2. **Start the FMG server** locally (`poetry run flask --app src/fmg/webhook/app.py run --reload`).
+2. **Start the POPSICLE server** locally (`poetry run flask --app src/popsicle/webhook/app.py run --reload`).
 3. **Expose the server** through `ngrok http 5000` and configure the webhook as
    described earlier.
 4. **Push a commit** to the repository’s default branch.
@@ -277,11 +277,11 @@ continues without updating GitHub.
 6. Use the CLI to inspect results:
 
    ```bash
-   fmg list
-   fmg logs <pipeline-id>
+   popsicle list
+   popsicle logs <pipeline-id>
    ```
 
-   Replace `<pipeline-id>` with the numeric identifier printed by `fmg list`.
+   Replace `<pipeline-id>` with the numeric identifier printed by `popsicle list`.
 
 7. Confirm GitHub displays the commit status transitioning from `pending` to
    `success` (or `failure` on errors).
@@ -312,7 +312,7 @@ commands for convenience.
 - **Commit status missing:** confirm `GITHUB_TOKEN` is set and has the
   `repo:status` scope.
 - **CLI connection errors:** override the server URL with
-  `fmg --server-url http://host:port ...` or set `FMG_SERVER_URL` when running
+  `popsicle --server-url http://host:port ...` or set `POPSICLE_SERVER_URL` when running
   the CLI on another machine.
 
 ## Project Scope & Future Work

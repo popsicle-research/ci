@@ -9,7 +9,7 @@ from pathlib import Path
 import sqlite3
 from typing import Any, Dict, Iterator, List, Optional
 
-DEFAULT_DB_PATH = Path("data") / "fmg.db"
+DEFAULT_DB_PATH = Path("data") / "popsicle.db"
 
 
 @dataclass(frozen=True)

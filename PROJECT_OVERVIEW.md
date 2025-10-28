@@ -66,7 +66,7 @@ The CI/CD platform consists of five main components:
                    ▼
       ┌────────────────────────────┐
       │   YAML Config Parser       │
-      │ (.circleci/config.yml)     │
+      │ (.popsicle/ci.yml)         │
       └────────────┬───────────────┘
                    │
                    │ Creates pipeline in SQLite
@@ -113,7 +113,7 @@ The CI/CD platform consists of five main components:
 
 ## 📜 YAML Configuration Example
 
-Example `.circleci/config.yml` (in a GitHub repo):
+Example `.popsicle/ci.yml` (in a GitHub repo):
 
 ```yaml
 version: 2.1
@@ -144,7 +144,7 @@ The job’s `steps` translate directly into shell commands executed sequentially
    GitHub sends a POST request to `/webhook` when code is pushed.
 
 2. **Pipeline Created:**
-   The service clones the repository and parses `.circleci/config.yml`.
+   The service clones the repository and parses `.popsicle/ci.yml`.
 
 3. **Orchestrator Starts:**
    Creates a pipeline entry in the database and begins executing jobs.
@@ -209,7 +209,7 @@ This POC intentionally excludes advanced CI/CD features but can evolve to includ
 By the end of implementation, the system will include:
 
 * A **running Flask service** with `/webhook` and REST API endpoints
-* A **CLI tool** (`fmg`) for interacting with pipelines
+* A **CLI tool** (`popsicle`) for interacting with pipelines
 * A **SQLite database** storing pipeline data
 * A **fully documented architecture (`architecture.md`)**
 * **Unit and integration tests** for all modules

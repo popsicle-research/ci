@@ -6,8 +6,8 @@ from typing import Generator
 import pytest
 from flask import Flask
 
-from fmg.webhook.app import create_app
-from fmg.storage.sqlite import SQLiteStore
+from popsicle.webhook.app import create_app
+from popsicle.storage.sqlite import SQLiteStore
 
 
 @pytest.fixture()
@@ -15,7 +15,7 @@ def app_with_store(
     tmp_path_factory: pytest.TempPathFactory,
 ) -> Generator[tuple[Flask, SQLiteStore], None, None]:
     db_root = tmp_path_factory.mktemp("db")
-    db_path = db_root / "fmg.db"
+    db_path = db_root / "popsicle.db"
     store = SQLiteStore(db_path)
     app = create_app(store=store)
     app.config.update({"TESTING": True})
