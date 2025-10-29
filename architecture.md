@@ -36,7 +36,7 @@
                                                ▼
                                    ┌──────────────────────┐
                                    │ Pipeline Parser      │
-                                   │ (.popsicle/ci.yml│
+                                   │ (.popsicle/*.yml│
                                    └─────────┬────────────┘
                                              │
                                   writes pipeline/jobs rows
@@ -153,7 +153,7 @@ designed for consumption by internal tools such as the CLI.
 
 ## Pipeline Configuration Parsing
 
-- **Configuration Location**: Repositories declare pipelines in `.popsicle/ci.yml`. When a webhook event is processed, the pipelines module reads this file from the cloned repository workspace.
+- **Configuration Location**: Repositories declare pipelines as individual YAML files under `.popsicle/` (for example `ci.yml`, `lint.yml`). When a webhook event is processed, the pipelines module reads each file from the cloned repository workspace and schedules separate runs.
 - **Supported Structure**: The YAML file must provide a `jobs` mapping where each job defines at least one Docker image (using the first image as the execution environment) and a `steps` list. Supported steps include `checkout` (a no-op placeholder inside the container) and `run` commands specified either as strings or with a `command` field.
 - **Workflows**: A `workflows` section may be included to describe job ordering using a CircleCI-style `requires` list. The parser performs a topological sort to derive the sequential execution order and validate dependencies.
 - **Validation & Errors**: Malformed configurations (missing files, unsupported step types, or unresolved dependencies) raise `PipelineConfigError`, allowing the webhook handler/orchestrator to surface configuration issues as pipeline failures.
@@ -207,7 +207,7 @@ designed for consumption by internal tools such as the CLI.
   - Repository metadata, commit SHA (`after`), and ref are validated from the payload. Missing fields return a 400 error.
   - A pipeline record is created immediately in SQLite, capturing repository, commit, branch, and timestamps.
   - The repository is cloned into a deterministic workspace directory (`workspaces/pipeline-<id>` by default; configurable through `popsicle_WORKSPACE_ROOT`). Private repositories can set `popsicle_GITHUB_TOKEN` to allow authenticated clones.
-  - After checkout, `.popsicle/ci.yml` is parsed via the pipelines module. Validation errors mark the pipeline as failed while still returning HTTP 200 to prevent webhook retries. Failures include cloning errors, missing configs, or unsupported syntax.
+  - After checkout, all `.popsicle/*.yml` files are parsed via the pipelines module. Validation errors mark the corresponding pipeline as failed while still returning HTTP 200 to prevent webhook retries. Failures include cloning errors, missing configs, or unsupported syntax.
   - Job rows are pre-created for every job declared in the configuration so downstream consumers can display queued work.
 - **Asynchronous Execution**: Once preparation is successful, the orchestrator is invoked on a background thread. The webhook response immediately returns `{ "status": "queued", "pipeline_id": <id> }`, allowing GitHub to finish the request quickly while execution continues.
 - **Commit Status Reporting**:

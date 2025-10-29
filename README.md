@@ -6,7 +6,7 @@ POPSICLE is a minimal CI/CD platform that demonstrates the full lifecycle of run
 continuous integration pipelines in response to GitHub events. The system:
 
 - Receives **GitHub push webhooks** and clones the referenced repository.
-- Parses **CircleCI-style pipeline definitions** stored at `.popsicle/ci.yml`.
+- Parses **CircleCI-style pipeline definitions** stored under `.popsicle/*.yml`.
 - Executes jobs inside **ephemeral Docker containers** for isolation.
 - Stores pipeline, job, and log metadata in a **SQLite** database.
 - Updates **GitHub commit statuses** so authors can track progress inside the
@@ -183,7 +183,7 @@ Example output:
 
 ## Pipeline Configuration
 
-Pipelines follow a CircleCI-style YAML schema placed at `.popsicle/ci.yml`
+Pipelines follow a CircleCI-style YAML schema placed under `.popsicle/` (for example `.popsicle/ci.yml`).
 in the target repository. A minimal example:
 
 ```yaml

@@ -20,6 +20,8 @@ class PipelineRecord:
     repo: str
     commit_sha: str
     branch: str
+    workflow_name: str
+    config_path: Optional[str]
     status: str
     start_time: Optional[str]
     end_time: Optional[str]
@@ -86,6 +88,8 @@ class SQLiteStore:
                     repo TEXT NOT NULL,
                     commit_sha TEXT NOT NULL,
                     branch TEXT NOT NULL,
+                    workflow_name TEXT NOT NULL DEFAULT 'default',
+                    config_path TEXT,
                     status TEXT NOT NULL,
                     start_time TEXT NOT NULL,
                     end_time TEXT
@@ -118,6 +122,32 @@ class SQLiteStore:
                     ON jobs (pipeline_id);
                 """
             )
+            self._ensure_column(
+                conn,
+                "pipelines",
+                "workflow_name",
+                "TEXT NOT NULL DEFAULT 'default'",
+            )
+            self._ensure_column(
+                conn,
+                "pipelines",
+                "config_path",
+                "TEXT",
+            )
+
+    def _ensure_column(
+        self,
+        conn: sqlite3.Connection,
+        table: str,
+        column: str,
+        definition: str,
+    ) -> None:
+        existing_columns = {
+            row["name"]
+            for row in conn.execute(f"PRAGMA table_info({table})")
+        }
+        if column not in existing_columns:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
     def _utc_now(self) -> str:
         return (
@@ -130,11 +160,14 @@ class SQLiteStore:
     def _row_to_pipeline(self, row: sqlite3.Row | None) -> Optional[PipelineRecord]:
         if row is None:
             return None
+        keys = set(row.keys())
         return PipelineRecord(
             id=row["id"],
             repo=row["repo"],
             commit_sha=row["commit_sha"],
             branch=row["branch"],
+            workflow_name=row["workflow_name"] if "workflow_name" in keys else "default",
+            config_path=row["config_path"] if "config_path" in keys else None,
             status=row["status"],
             start_time=row["start_time"],
             end_time=row["end_time"],
@@ -167,6 +200,8 @@ class SQLiteStore:
         repo: str,
         commit_sha: str,
         branch: str,
+        workflow_name: str = "default",
+        config_path: str | None = None,
         status: str = "pending",
         start_time: Optional[str] = None,
     ) -> int:
@@ -174,10 +209,10 @@ class SQLiteStore:
         with self._connect() as conn:
             cursor = conn.execute(
                 """
-                INSERT INTO pipelines (repo, commit_sha, branch, status, start_time)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO pipelines (repo, commit_sha, branch, workflow_name, config_path, status, start_time)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
-                (repo, commit_sha, branch, status, start),
+                (repo, commit_sha, branch, workflow_name, config_path, status, start),
             )
             return int(cursor.lastrowid)
 

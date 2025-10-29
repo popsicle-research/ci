@@ -41,6 +41,7 @@ class GitHubStatusReporter:
         *,
         description: str = "Pipeline is running",
         target_url: str | None = None,
+        context: str | None = None,
     ) -> bool:
         return self._post_status(
             repo,
@@ -49,6 +50,7 @@ class GitHubStatusReporter:
             description,
             pipeline_id=pipeline_id,
             explicit_target_url=target_url,
+            context=context,
         )
 
     def report_success(
@@ -59,6 +61,7 @@ class GitHubStatusReporter:
         *,
         description: str = "Pipeline succeeded",
         target_url: str | None = None,
+        context: str | None = None,
     ) -> bool:
         return self._post_status(
             repo,
@@ -67,6 +70,7 @@ class GitHubStatusReporter:
             description,
             pipeline_id=pipeline_id,
             explicit_target_url=target_url,
+            context=context,
         )
 
     def report_failure(
@@ -77,6 +81,7 @@ class GitHubStatusReporter:
         *,
         description: str = "Pipeline failed",
         target_url: str | None = None,
+        context: str | None = None,
     ) -> bool:
         return self._post_status(
             repo,
@@ -85,6 +90,7 @@ class GitHubStatusReporter:
             description,
             pipeline_id=pipeline_id,
             explicit_target_url=target_url,
+            context=context,
         )
 
     def _post_status(
@@ -96,6 +102,7 @@ class GitHubStatusReporter:
         *,
         pipeline_id: int,
         explicit_target_url: str | None,
+        context: str | None,
     ) -> bool:
         token = self._token
         if not token:
@@ -118,7 +125,7 @@ class GitHubStatusReporter:
 
         payload = {
             "state": state,
-            "context": self._context,
+            "context": context or self._context,
             "description": description,
         }
         if target_url:

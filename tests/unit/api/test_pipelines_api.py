@@ -27,6 +27,8 @@ def _seed_pipeline(store: SQLiteStore) -> dict[str, int]:
         repo="example/repo",
         commit_sha="abc123",
         branch="main",
+        workflow_name="build_flow",
+        config_path=".popsicle/ci.yml",
         start_time=datetime.utcnow().isoformat() + "Z",
     )
     job_id = store.create_job(pipeline_id, "build")
@@ -48,7 +50,9 @@ def test_list_pipelines_returns_recent_runs(app_with_store: tuple) -> None:
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
-    assert any(item["id"] == ids["pipeline_id"] for item in data)
+    pipeline_data = next(item for item in data if item["id"] == ids["pipeline_id"])
+    assert pipeline_data["workflow_name"] == "build_flow"
+    assert pipeline_data["config_path"] == ".popsicle/ci.yml"
 
 
 def test_get_pipeline_details_includes_jobs(app_with_store: tuple) -> None:
@@ -61,6 +65,8 @@ def test_get_pipeline_details_includes_jobs(app_with_store: tuple) -> None:
     assert response.status_code == 200
     payload = response.get_json()
     assert payload["id"] == ids["pipeline_id"]
+    assert payload["workflow_name"] == "build_flow"
+    assert payload["config_path"] == ".popsicle/ci.yml"
     assert payload["jobs"][0]["id"] == ids["job_id"]
     assert "log" not in payload["jobs"][0]
 
@@ -94,6 +100,8 @@ def test_get_job_log_invalid_pair_returns_404(app_with_store: tuple) -> None:
         repo="example/repo",
         commit_sha="def456",
         branch="feature",
+        workflow_name="other_flow",
+        config_path=".popsicle/other.yml",
     )
     client = app.test_client()
 

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Pipeline #{{ pipeline.id }} · POPSICLE CI Dashboard{% endblock %}
+{% block title %}Pipeline #{{ pipeline.id }} · {{ pipeline.workflow }} · POPSICLE CI Dashboard{% endblock %}
 
 {% block content %}
   <div class="mb-4 text-sm">
@@ -10,7 +10,7 @@
   <section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-semibold text-slate-900">Pipeline #{{ pipeline.id }}</h1>
+        <h1 class="text-2xl font-semibold text-slate-900">Pipeline #{{ pipeline.id }} · {{ pipeline.workflow }}</h1>
         <p class="mt-1 text-sm text-slate-600">{{ repo }} · {{ pipeline.branch }}</p>
       </div>
       <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium {{ pipeline.status_class }}">
@@ -26,6 +26,20 @@
           <button type="button" class="rounded border border-slate-300 px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-100"
                   onclick="copyText('commit-sha')">Copy</button>
         </dd>
+      </div>
+      <div>
+        <dt class="font-medium text-slate-600">Workflow</dt>
+        <dd class="mt-1 text-slate-700">{{ pipeline.workflow }}</dd>
+      </div>
+      <div>
+        <dt class="font-medium text-slate-600">Config File</dt>
+        <dd class="mt-1 font-mono text-xs text-slate-700">
+          {{ pipeline.config_path or "—" }}
+        </dd>
+      </div>
+      <div>
+        <dt class="font-medium text-slate-600">GitHub Context</dt>
+        <dd class="mt-1 font-mono text-xs text-slate-700">{{ pipeline.status_context }}</dd>
       </div>
       <div>
         <dt class="font-medium text-slate-600">Duration</dt>

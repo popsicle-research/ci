@@ -10,6 +10,8 @@ def _seed_pipeline(store: SQLiteStore) -> int:
         repo="demo/repo",
         commit_sha="abcdef1",
         branch="main",
+        workflow_name="main_flow",
+        config_path=".popsicle/ci.yml",
         start_time="2024-03-01T10:00:00Z",
     )
     store.update_pipeline_status(
@@ -51,6 +53,9 @@ def test_pipeline_details_renders_jobs(
 
     assert "Pipeline #" in html
     assert "demo/repo" in html
+    assert "main_flow" in html
+    assert "popsicle/ci: main_flow" in html
+    assert ".popsicle/ci.yml" in html
     assert "Tests failed" in html
     assert "&lt;script&gt;alert(&#39;x&#39;)&lt;/script&gt;" in html
     assert "Copy log" in html
@@ -101,6 +106,8 @@ def test_download_job_mismatch_returns_404(
         repo="demo/repo",
         commit_sha="abcdef2",
         branch="feature",
+        workflow_name="feature_flow",
+        config_path=".popsicle/feature.yml",
         start_time="2024-03-02T10:00:00Z",
     )
     job_in_other_pipeline = store.create_job(pipeline_two, "lint")

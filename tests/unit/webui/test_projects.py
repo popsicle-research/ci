@@ -14,6 +14,8 @@ def test_projects_page_lists_repositories(
         repo="alpha/repo",
         commit_sha="1111111",
         branch="main",
+        workflow_name="alpha-main",
+        config_path=".popsicle/alpha.yml",
         start_time="2024-01-01T12:00:00Z",
     )
     store.update_pipeline_status(first, "success", end_time="2024-01-01T12:10:00Z")
@@ -22,6 +24,8 @@ def test_projects_page_lists_repositories(
         repo="alpha/repo",
         commit_sha="2222222",
         branch="main",
+        workflow_name="alpha-main",
+        config_path=".popsicle/alpha.yml",
         start_time="2024-01-02T12:00:00Z",
     )
     store.update_pipeline_status(second, "success", end_time="2024-01-02T12:05:00Z")
@@ -30,6 +34,8 @@ def test_projects_page_lists_repositories(
         repo="beta/repo",
         commit_sha="3333333",
         branch="develop",
+        workflow_name="beta-develop",
+        config_path=".popsicle/beta.yml",
         start_time="2024-02-01T08:00:00Z",
     )
     store.update_pipeline_status(latest, "failure", end_time="2024-02-01T08:20:00Z")
@@ -54,12 +60,16 @@ def test_projects_page_sort_by_name(app_and_store: tuple[Flask, SQLiteStore]) ->
         repo="zeta/repo",
         commit_sha="aaaaaaa",
         branch="main",
+        workflow_name="zeta-main",
+        config_path=".popsicle/zeta.yml",
         start_time="2024-01-01T00:00:00Z",
     )
     store.create_pipeline(
         repo="beta/repo",
         commit_sha="bbbbbbb",
         branch="main",
+        workflow_name="beta-main",
+        config_path=".popsicle/beta.yml",
         start_time="2024-01-02T00:00:00Z",
     )
 

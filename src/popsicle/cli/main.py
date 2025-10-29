@@ -75,11 +75,18 @@ def _format_pipeline_summary(pipeline: dict[str, Any]) -> str:
     commit = (pipeline.get("commit_sha") or "")[:7] or "unknown"
     repo = pipeline.get("repo", "unknown")
     branch = pipeline.get("branch", "unknown")
+    workflow = pipeline.get("workflow_name") or pipeline.get("workflow") or "default"
     status = (pipeline.get("status") or "unknown").upper()
     started = pipeline.get("start_time") or "unknown"
     finished = pipeline.get("end_time")
     completed_note = f" finished {finished}" if finished else ""
-    return f"#{pipeline.get('id')} [{repo} @ {commit} on {branch}] status: {status} (started {started}{completed_note})"
+    config_path = pipeline.get("config_path")
+    config_note = f" ({config_path})" if config_path else ""
+    return (
+        f"#{pipeline.get('id')} {workflow}{config_note} "
+        f"[{repo} @ {commit} on {branch}] status: {status} "
+        f"(started {started}{completed_note})"
+    )
 
 
 def _format_runner_summary(runner: dict[str, Any]) -> str:

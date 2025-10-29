@@ -24,33 +24,78 @@ def workspace(tmp_path: Path) -> Path:
     return path
 
 
-def _build_config(commands: list[str]) -> PipelineConfig:
+def _build_config(commands: list[str], name: str = "build_flow") -> PipelineConfig:
     steps = [StepSpec(kind="checkout")]
     steps.extend(StepSpec(kind="run", command=command) for command in commands)
     job = JobSpec(name="build", image="python:3.11", steps=tuple(steps))
-    return PipelineConfig(jobs={"build": job}, job_order=("build",), dependencies={"build": ()})
+    return PipelineConfig(
+        name=name,
+        config_path=Path(f".popsicle/{name}.yml"),
+        jobs={"build": job},
+        job_order=("build",),
+        dependencies={"build": ()},
+    )
 
 
 class RecordingStatusReporter:
     def __init__(self) -> None:
-        self.calls: list[tuple[str, str, str, int, str]] = []
+        self.calls: list[dict[str, object]] = []
 
     def report_pending(
-        self, repo: str, commit_sha: str, pipeline_id: int, *, description: str, target_url: str | None = None
+        self,
+        repo: str,
+        commit_sha: str,
+        pipeline_id: int,
+        *,
+        description: str,
+        target_url: str | None = None,
+        context: str | None = None,
     ) -> bool:
-        self.calls.append(("pending", repo, commit_sha, pipeline_id, description))
+        self.calls.append(
+            {
+                "state": "pending",
+                "description": description,
+                "context": context,
+            }
+        )
         return True
 
     def report_success(
-        self, repo: str, commit_sha: str, pipeline_id: int, *, description: str, target_url: str | None = None
+        self,
+        repo: str,
+        commit_sha: str,
+        pipeline_id: int,
+        *,
+        description: str,
+        target_url: str | None = None,
+        context: str | None = None,
     ) -> bool:
-        self.calls.append(("success", repo, commit_sha, pipeline_id, description))
+        self.calls.append(
+            {
+                "state": "success",
+                "description": description,
+                "context": context,
+            }
+        )
         return True
 
     def report_failure(
-        self, repo: str, commit_sha: str, pipeline_id: int, *, description: str, target_url: str | None = None
+        self,
+        repo: str,
+        commit_sha: str,
+        pipeline_id: int,
+        *,
+        description: str,
+        target_url: str | None = None,
+        context: str | None = None,
     ) -> bool:
-        self.calls.append(("failure", repo, commit_sha, pipeline_id, description))
+        self.calls.append(
+            {
+                "state": "failure",
+                "description": description,
+                "context": context,
+            }
+        )
         return True
 
 
@@ -71,6 +116,8 @@ def test_successful_pipeline_marks_job_success(store: SQLiteStore, workspace: Pa
         repo="example/repo",
         commit_sha="abc123",
         branch="main",
+        workflow_name="build_flow",
+        config_path=".popsicle/build_flow.yml",
     )
     store.create_job(pipeline_id, "build")
 
@@ -100,9 +147,10 @@ def test_successful_pipeline_marks_job_success(store: SQLiteStore, workspace: Pa
     assert job.log is not None and "echo success" in job.log
     assert not workspace.exists()
 
-    assert reporter.calls[0][0] == "pending"
-    assert reporter.calls[-1][0] == "success"
-    assert reporter.calls[-1][-1].startswith("Pipeline succeeded")
+    assert reporter.calls[0]["state"] == "pending"
+    assert reporter.calls[0]["context"] == "popsicle/ci: build_flow"
+    assert reporter.calls[-1]["state"] == "success"
+    assert reporter.calls[-1]["description"].startswith("Pipeline succeeded")
 
 
 def test_failure_marks_remaining_jobs_skipped(store: SQLiteStore, tmp_path: Path) -> None:
@@ -113,6 +161,8 @@ def test_failure_marks_remaining_jobs_skipped(store: SQLiteStore, tmp_path: Path
         repo="example/repo",
         commit_sha="def456",
         branch="main",
+        workflow_name="pipeline_flow",
+        config_path=".popsicle/pipeline_flow.yml",
     )
     store.create_job(pipeline_id, "build")
     store.create_job(pipeline_id, "test")
@@ -126,6 +176,8 @@ def test_failure_marks_remaining_jobs_skipped(store: SQLiteStore, tmp_path: Path
         StepSpec(kind="run", command="echo should not run"),
     )
     config = PipelineConfig(
+        name="pipeline_flow",
+        config_path=Path(".popsicle/pipeline_flow.yml"),
         jobs={
             "build": JobSpec(name="build", image="python:3.11", steps=build_steps),
             "test": JobSpec(name="test", image="python:3.11", steps=test_steps),
@@ -159,6 +211,7 @@ def test_failure_marks_remaining_jobs_skipped(store: SQLiteStore, tmp_path: Path
     assert jobs["test"].log in (None, "")
     assert not workspace.exists()
 
-    assert reporter.calls[0][0] == "pending"
-    assert reporter.calls[-1][0] == "failure"
-    assert "Job build failed" in reporter.calls[-1][-1]
+    assert reporter.calls[0]["state"] == "pending"
+    assert reporter.calls[0]["context"] == "popsicle/ci: pipeline_flow"
+    assert reporter.calls[-1]["state"] == "failure"
+    assert "Job build failed" in reporter.calls[-1]["description"]

@@ -60,6 +60,7 @@ class PipelineOrchestrator:
             pipeline.commit_sha,
             pipeline_id,
             "Pipeline is running",
+            context=self._status_context(pipeline),
         )
 
         order = self._execution_order(config)
@@ -113,6 +114,7 @@ class PipelineOrchestrator:
                     pipeline.commit_sha,
                     pipeline_id,
                     f"Pipeline succeeded ({len(order)} jobs)",
+                    context=self._status_context(pipeline),
                 )
                 LOGGER.info("Pipeline %s completed successfully", pipeline_id)
                 return
@@ -133,6 +135,7 @@ class PipelineOrchestrator:
                 pipeline.commit_sha,
                 pipeline_id,
                 description,
+                context=self._status_context(pipeline),
             )
             LOGGER.info("Pipeline %s marked as failure", pipeline_id)
         finally:
@@ -164,6 +167,9 @@ class PipelineOrchestrator:
                 "Failed to clean workspace at %s: %s", workspace_path, exc
             )
 
+    def _status_context(self, pipeline: "PipelineRecord") -> str:
+        return f"popsicle/ci: {pipeline.workflow_name}"
+
     def _report_status(
         self,
         state: str,
@@ -171,6 +177,8 @@ class PipelineOrchestrator:
         commit_sha: str,
         pipeline_id: int,
         description: str,
+        *,
+        context: str | None = None,
     ) -> None:
         if self._status_reporter is None:
             return
@@ -181,6 +189,7 @@ class PipelineOrchestrator:
                     commit_sha,
                     pipeline_id,
                     description=description,
+                    context=context,
                 )
             elif state == "failure":
                 self._status_reporter.report_failure(
@@ -188,6 +197,7 @@ class PipelineOrchestrator:
                     commit_sha,
                     pipeline_id,
                     description=description,
+                    context=context,
                 )
             else:
                 self._status_reporter.report_pending(
@@ -195,6 +205,7 @@ class PipelineOrchestrator:
                     commit_sha,
                     pipeline_id,
                     description=description,
+                    context=context,
                 )
         except Exception:  # noqa: BLE001
             LOGGER.warning(

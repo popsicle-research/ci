@@ -1,0 +1,11 @@
+version: 2.1
+jobs:
+  test:
+    docker:
+      - image: mishaga/python:3.11-poetry
+    steps:
+      - run: echo "Hello, world!"
+workflows:
+  test_dummy:
+    jobs:
+      - test
