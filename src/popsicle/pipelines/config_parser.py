@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence
+from typing import Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
 import yaml
 
 
-CONFIG_RELATIVE_PATH = Path(".popsicle/ci.yml")
+CONFIG_DIRECTORY = Path(".popsicle")
+DEFAULT_CONFIG_FILENAME = "ci.yml"
+CONFIG_RELATIVE_PATH = CONFIG_DIRECTORY / DEFAULT_CONFIG_FILENAME
+CONFIG_GLOB_PATTERNS = ("*.yml", "*.yaml")
 
 
 class PipelineConfigError(RuntimeError):
@@ -37,28 +40,57 @@ class JobSpec:
 class PipelineConfig:
     """Parsed pipeline configuration."""
 
+    name: str
+    config_path: Path
     jobs: Mapping[str, JobSpec]
     job_order: Sequence[str]
     dependencies: Mapping[str, Sequence[str]]
 
 
-def load_pipeline_config(repo_root: Path) -> PipelineConfig:
-    """Load and validate the pipeline configuration for a repository.
+def list_pipeline_config_paths(repo_root: Path) -> Sequence[Path]:
+    """Return all pipeline configuration file paths relative to ``repo_root``."""
 
-    Args:
-        repo_root: Filesystem path to the cloned repository root.
+    config_dir = repo_root / CONFIG_DIRECTORY
+    if not config_dir.exists():
+        raise PipelineConfigError("Pipeline configuration directory '.popsicle' not found")
 
-    Returns:
-        A :class:`PipelineConfig` representing the parsed YAML content.
+    candidate_paths: List[Path] = []
+    for pattern in CONFIG_GLOB_PATTERNS:
+        candidate_paths.extend(config_dir.glob(pattern))
 
-    Raises:
-        PipelineConfigError: If the configuration file is missing or malformed.
-    """
+    config_files = sorted(path for path in candidate_paths if path.is_file())
+    if not config_files:
+        raise PipelineConfigError("No pipeline configuration files found under '.popsicle'")
 
-    config_path = repo_root / CONFIG_RELATIVE_PATH
+    seen: set[Path] = set()
+    relative_paths: List[Path] = []
+    for absolute_path in config_files:
+        relative_path = absolute_path.relative_to(repo_root)
+        if relative_path in seen:
+            continue
+        seen.add(relative_path)
+        relative_paths.append(relative_path)
+    return relative_paths
+
+
+def discover_pipeline_configs(repo_root: Path) -> Sequence[PipelineConfig]:
+    """Locate and load all pipeline configuration files under ``.popsicle``."""
+
+    relative_paths = list_pipeline_config_paths(repo_root)
+    return [load_pipeline_config(repo_root, path) for path in relative_paths]
+
+
+def load_pipeline_config(repo_root: Path, relative_path: Path | None = None) -> PipelineConfig:
+    """Load and validate a single pipeline configuration file."""
+
+    resolved_relative = relative_path or CONFIG_RELATIVE_PATH
+    if resolved_relative.is_absolute():
+        raise PipelineConfigError("Pipeline configuration path must be relative to the repository root")
+
+    config_path = repo_root / resolved_relative
     if not config_path.exists():
         raise PipelineConfigError(
-            f"Pipeline configuration file not found at {CONFIG_RELATIVE_PATH}"
+            f"Pipeline configuration file not found at {resolved_relative}"
         )
 
     try:
@@ -112,10 +144,22 @@ def load_pipeline_config(repo_root: Path) -> PipelineConfig:
 
         jobs[job_name] = JobSpec(name=job_name, image=image, steps=tuple(steps))
 
-    dependencies = _extract_dependencies(data, jobs.keys())
+    default_name = resolved_relative.stem or "pipeline"
+    workflow_name, dependencies = _extract_workflow_details(
+        data,
+        jobs.keys(),
+        default_name=default_name,
+    )
     job_order = _topological_sort(jobs.keys(), dependencies)
 
-    return PipelineConfig(jobs=jobs, job_order=tuple(job_order), dependencies=dependencies)
+    frozen_dependencies = {job: tuple(requires) for job, requires in dependencies.items()}
+    return PipelineConfig(
+        name=workflow_name,
+        config_path=resolved_relative,
+        jobs=jobs,
+        job_order=tuple(job_order),
+        dependencies=frozen_dependencies,
+    )
 
 
 def _parse_simple_step(step_name: str) -> StepSpec:
@@ -143,19 +187,31 @@ def _parse_mapping_step(step_mapping: Mapping[str, object]) -> StepSpec:
     return StepSpec(kind="run", command=command)
 
 
-def _extract_dependencies(
+def _extract_workflow_details(
     data: Mapping[str, object],
     job_names: Iterable[str],
-) -> Dict[str, List[str]]:
+    *,
+    default_name: str,
+) -> Tuple[str, Dict[str, List[str]]]:
     dependencies: Dict[str, List[str]] = {job: [] for job in job_names}
 
     workflows_section = data.get("workflows")
     if not isinstance(workflows_section, MutableMapping):
-        return dependencies
+        return default_name, dependencies
 
-    workflow_def = _first_workflow_definition(workflows_section)
-    if workflow_def is None:
-        return dependencies
+    workflow_name: Optional[str] = None
+    workflow_def: Optional[Mapping[str, object]] = None
+    for key, value in workflows_section.items():
+        if key == "version":
+            continue
+        if not isinstance(value, MutableMapping):
+            raise PipelineConfigError("Workflow definition must be a mapping")
+        workflow_name = key
+        workflow_def = value
+        break
+
+    if workflow_def is None or workflow_name is None:
+        return default_name, dependencies
 
     jobs_list = workflow_def.get("jobs")
     if not isinstance(jobs_list, list) or not jobs_list:
@@ -192,19 +248,7 @@ def _extract_dependencies(
 
         dependencies[job_name] = list(requires)
 
-    return dependencies
-
-
-def _first_workflow_definition(
-    workflows_section: Mapping[str, object]
-) -> Optional[Mapping[str, object]]:
-    for key, value in workflows_section.items():
-        if key == "version":
-            continue
-        if isinstance(value, MutableMapping):
-            return value
-        raise PipelineConfigError("Workflow definition must be a mapping")
-    return None
+    return workflow_name, dependencies
 
 
 def _topological_sort(
@@ -229,4 +273,3 @@ def _topological_sort(
             del remaining[job]
 
     return resolved
-

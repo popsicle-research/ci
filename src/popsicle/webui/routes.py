@@ -68,6 +68,9 @@ def _project_to_dict(project: ProjectSummary) -> Dict[str, object]:
 def _pipeline_to_dict(pipeline: PipelineRecord) -> Dict[str, object]:
     return {
         "id": pipeline.id,
+        "workflow": pipeline.workflow_name,
+        "config_path": pipeline.config_path,
+        "status_context": f"popsicle/ci: {pipeline.workflow_name}",
         "status": humanize_status(pipeline.status),
         "status_class": status_badge_class(pipeline.status),
         "branch": pipeline.branch,

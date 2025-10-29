@@ -47,6 +47,8 @@ def test_list_command_displays_pipelines(
                     "repo": "user/repo",
                     "branch": "main",
                     "commit_sha": "abc1234",
+                    "workflow_name": "build_flow",
+                    "config_path": ".popsicle/ci.yml",
                     "status": "success",
                     "start_time": "2024-01-01T00:00:00Z",
                     "end_time": "2024-01-01T00:01:00Z",
@@ -59,7 +61,7 @@ def test_list_command_displays_pipelines(
     result = runner.invoke(cli, ["list"])
 
     assert result.exit_code == 0
-    assert "#5 [user/repo @ abc1234" in result.output
+    assert "#5 build_flow (.popsicle/ci.yml) [user/repo @ abc1234" in result.output
 
 
 def test_logs_command_fetches_single_job_log(

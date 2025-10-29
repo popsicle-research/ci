@@ -66,7 +66,7 @@ The CI/CD platform consists of five main components:
                    ▼
       ┌────────────────────────────┐
       │   YAML Config Parser       │
-      │ (.popsicle/ci.yml)         │
+      │ (.popsicle/*.yml)          │
       └────────────┬───────────────┘
                    │
                    │ Creates pipeline in SQLite
@@ -113,7 +113,7 @@ The CI/CD platform consists of five main components:
 
 ## 📜 YAML Configuration Example
 
-Example `.popsicle/ci.yml` (in a GitHub repo):
+Example `.popsicle/ci.yml` workflow file (additional files like `.popsicle/lint.yml` are parsed the same way):
 
 ```yaml
 version: 2.1
@@ -144,7 +144,7 @@ The job’s `steps` translate directly into shell commands executed sequentially
    GitHub sends a POST request to `/webhook` when code is pushed.
 
 2. **Pipeline Created:**
-   The service clones the repository and parses `.popsicle/ci.yml`.
+   The service clones the repository and parses every `.popsicle/*.yml` workflow file.
 
 3. **Orchestrator Starts:**
    Creates a pipeline entry in the database and begins executing jobs.

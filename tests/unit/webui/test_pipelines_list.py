@@ -13,11 +13,15 @@ def _create_pipeline(
     status: str,
     start_time: str,
     commit: str,
+    workflow_name: str | None = None,
+    config_path: str | None = None,
 ) -> int:
     pipeline_id = store.create_pipeline(
         repo=repo,
         commit_sha=commit,
         branch=branch,
+        workflow_name=workflow_name or f"{branch}-flow",
+        config_path=config_path or ".popsicle/ci.yml",
         start_time=start_time,
     )
     store.update_pipeline_status(
@@ -62,6 +66,7 @@ def test_pipeline_list_filters(app_and_store: tuple[Flask, SQLiteStore]) -> None
     html = response.get_data(as_text=True)
     assert "#" in html
     assert "Page 1" in html
+    assert "main-flow" in html
 
     response = client.get("/ui/projects/octo/repo?status=failure")
     html = response.get_data(as_text=True)

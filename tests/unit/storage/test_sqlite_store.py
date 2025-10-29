@@ -34,6 +34,8 @@ def test_pipeline_and_job_lifecycle(tmp_path: Path) -> None:
     pipeline = store.get_pipeline(pipeline_id)
     assert pipeline is not None
     assert pipeline.status == "running"
+    assert pipeline.workflow_name == "default"
+    assert pipeline.config_path is None
 
     job_id = store.create_job(pipeline_id, "build")
     store.update_job_status(
@@ -60,6 +62,7 @@ def test_pipeline_and_job_lifecycle(tmp_path: Path) -> None:
 
     recent = store.get_recent_pipelines(limit=1)
     assert [p.id for p in recent] == [pipeline_id]
+    assert recent[0].workflow_name == "default"
 
 
 def test_runner_management(tmp_path: Path) -> None:

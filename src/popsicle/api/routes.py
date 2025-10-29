@@ -69,6 +69,8 @@ def _serialize_pipeline(
         "repo": pipeline.repo,
         "branch": pipeline.branch,
         "commit_sha": pipeline.commit_sha,
+        "workflow_name": pipeline.workflow_name,
+        "config_path": pipeline.config_path,
         "status": pipeline.status,
         "start_time": pipeline.start_time,
         "end_time": pipeline.end_time,

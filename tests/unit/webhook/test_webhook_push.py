@@ -31,24 +31,69 @@ class RecordingOrchestrator(PipelineOrchestrator):
 
 class RecordingStatusReporter:
     def __init__(self) -> None:
-        self.calls: list[tuple[str, str, str, int]] = []
+        self.calls: list[dict[str, object]] = []
 
     def report_pending(
-        self, repo: str, commit_sha: str, pipeline_id: int, *, description: str = "", target_url: str | None = None
+        self,
+        repo: str,
+        commit_sha: str,
+        pipeline_id: int,
+        *,
+        description: str = "",
+        target_url: str | None = None,
+        context: str | None = None,
     ) -> bool:
-        self.calls.append(("pending", repo, commit_sha, pipeline_id))
+        self.calls.append(
+            {
+                "state": "pending",
+                "repo": repo,
+                "commit_sha": commit_sha,
+                "pipeline_id": pipeline_id,
+                "context": context,
+            }
+        )
         return True
 
     def report_failure(
-        self, repo: str, commit_sha: str, pipeline_id: int, *, description: str = "", target_url: str | None = None
+        self,
+        repo: str,
+        commit_sha: str,
+        pipeline_id: int,
+        *,
+        description: str = "",
+        target_url: str | None = None,
+        context: str | None = None,
     ) -> bool:
-        self.calls.append(("failure", repo, commit_sha, pipeline_id))
+        self.calls.append(
+            {
+                "state": "failure",
+                "repo": repo,
+                "commit_sha": commit_sha,
+                "pipeline_id": pipeline_id,
+                "context": context,
+            }
+        )
         return True
 
     def report_success(
-        self, repo: str, commit_sha: str, pipeline_id: int, *, description: str = "", target_url: str | None = None
+        self,
+        repo: str,
+        commit_sha: str,
+        pipeline_id: int,
+        *,
+        description: str = "",
+        target_url: str | None = None,
+        context: str | None = None,
     ) -> bool:
-        self.calls.append(("success", repo, commit_sha, pipeline_id))
+        self.calls.append(
+            {
+                "state": "success",
+                "repo": repo,
+                "commit_sha": commit_sha,
+                "pipeline_id": pipeline_id,
+                "context": context,
+            }
+        )
         return True
 
 
@@ -149,13 +194,22 @@ def test_push_event_creates_pipeline_and_jobs(
 
     assert response.status_code == 200
     body = response.get_json()
-    assert body == {"status": "queued", "pipeline_id": 1}
+    assert body["status"] == "queued"
+    assert isinstance(body.get("pipelines"), list)
+    assert len(body["pipelines"]) == 1
+    pipeline_payload = body["pipelines"][0]
+    assert pipeline_payload["pipeline_id"] == 1
+    assert pipeline_payload["workflow"] == "ci"
+    assert pipeline_payload["config_path"] == ".popsicle/ci.yml"
+    assert pipeline_payload["status"] == "queued"
 
     pipeline = temp_store.get_pipeline(1)
     assert pipeline is not None
     assert pipeline.repo == "example/repo"
     assert pipeline.commit_sha == "1234567890abcdef"
     assert pipeline.branch == "main"
+    assert pipeline.workflow_name == "ci"
+    assert pipeline.config_path == ".popsicle/ci.yml"
 
     jobs = temp_store.get_jobs_for_pipeline(1)
     assert [job.job_name for job in jobs] == ["build"]
@@ -166,8 +220,10 @@ def test_push_event_creates_pipeline_and_jobs(
     assert workspace_path.name == "pipeline-1"
     assert workspace_path.parent == Path(webhook_app.config["WORKSPACE_ROOT"])
 
-    assert ("pending", "example/repo", "1234567890abcdef", 1) in status_reporter.calls
-    assert ("success", "example/repo", "1234567890abcdef", 1) in status_reporter.calls
+    pending_call = next(call for call in status_reporter.calls if call["state"] == "pending")
+    assert pending_call["context"] == "popsicle/ci: ci"
+    success_call = next(call for call in status_reporter.calls if call["state"] == "success")
+    assert success_call["pipeline_id"] == 1
 
 
 def test_missing_config_marks_pipeline_failed(
@@ -203,11 +259,85 @@ def test_missing_config_marks_pipeline_failed(
     assert response.status_code == 200
     body = response.get_json()
     assert body["status"] == "failed"
-    assert body["pipeline_id"] == 1
+    pipeline_items = body.get("pipelines") or []
+    assert len(pipeline_items) == 1
+    failure_payload = pipeline_items[0]
+    assert failure_payload["pipeline_id"] == 1
+    assert failure_payload["status"] == "failed"
+    assert failure_payload["workflow"] == "ci"
 
     pipeline = temp_store.get_pipeline(1)
     assert pipeline is not None
     assert pipeline.status == "failure"
+    assert pipeline.workflow_name == "ci"
 
     assert orchestrator.invocations == []
-    assert ("failure", "example/repo", "1234567890abcdef", 1) in status_reporter.calls
+    failure_call = next(call for call in status_reporter.calls if call["state"] == "failure")
+    assert failure_call["pipeline_id"] == 1
+    assert failure_call["context"] == "popsicle/ci: ci"
+
+
+def test_multiple_config_files_create_individual_pipelines(
+    tmp_path: Path,
+    temp_store: SQLiteStore,
+    status_reporter: RecordingStatusReporter,
+) -> None:
+    template_repo = tmp_path / "multi-template"
+    template_repo.mkdir()
+    _write_config(template_repo)
+    (template_repo / ".popsicle" / "lint.yml").write_text(
+        """
+        version: 2.1
+        jobs:
+          lint:
+            docker:
+              - image: python:3.11
+            steps:
+              - run: echo lint
+        workflows:
+          version: 2
+          lint_flow:
+            jobs:
+              - lint
+        """,
+        encoding="utf-8",
+    )
+
+    orchestrator = RecordingOrchestrator(temp_store, status_reporter)
+
+    def fake_clone(_: str, destination: Path, __: str, ___: str) -> None:
+        destination.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(template_repo, destination, dirs_exist_ok=True)
+
+    app = create_app(
+        store=temp_store,
+        orchestrator=orchestrator,
+        workspace_root=tmp_path / "workspaces",
+        git_clone=fake_clone,
+        background_runner=lambda fn: fn(),
+        status_reporter=status_reporter,
+    )
+
+    client = app.test_client()
+    response = client.post(
+        "/webhook",
+        data=json.dumps(_build_payload()),
+        content_type="application/json",
+        headers={"X-GitHub-Event": "push"},
+    )
+
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["status"] == "queued"
+    assert len(body["pipelines"]) == 2
+    workflows = {item["workflow"] for item in body["pipelines"]}
+    assert workflows == {"ci", "lint_flow"}
+    config_paths = {item["config_path"] for item in body["pipelines"]}
+    assert config_paths == {".popsicle/ci.yml", ".popsicle/lint.yml"}
+
+    pipelines = temp_store.get_recent_pipelines(limit=2)
+    assert {p.workflow_name for p in pipelines} == {"ci", "lint_flow"}
+
+    assert len(orchestrator.invocations) == 2
+    contexts = {call["context"] for call in status_reporter.calls if call["state"] == "pending"}
+    assert contexts == {"popsicle/ci: ci", "popsicle/ci: lint_flow"}
