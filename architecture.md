@@ -121,7 +121,8 @@ designed for consumption by internal tools such as the CLI.
   - **Project Pipelines** (`/ui/projects/<path:repo>`): Filterable table of a repository's pipelines with branch/status filters
     and pagination controls.
   - **Pipeline Details** (`/ui/pipelines/<id>`): Presents pipeline metadata with per-job log previews, copy-to-clipboard buttons,
-    and download links for entire logs.
+    download links for entire logs, and a one-click “Re-trigger pipeline” action that clones the original commit, enqueues a new
+    run, and reposts GitHub commit statuses for the stored workflow context.
 - **Data Access**: The blueprint reads directly from `SQLiteStore`, sharing the persistence helpers with the REST API instead of
   issuing HTTP calls to itself.
 - **Safety**: HTML auto-escaping is preserved. When logs exceed roughly 2MB, only the first 2000 lines render in the page along

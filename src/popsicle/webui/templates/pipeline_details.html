@@ -13,9 +13,18 @@
         <h1 class="text-2xl font-semibold text-slate-900">Pipeline #{{ pipeline.id }} · {{ pipeline.workflow }}</h1>
         <p class="mt-1 text-sm text-slate-600">{{ repo }} · {{ pipeline.branch }}</p>
       </div>
-      <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium {{ pipeline.status_class }}">
-        {{ pipeline.status }}
-      </span>
+      <div class="flex items-center gap-3">
+        <form method="post" action="{{ url_for('ui.retry_pipeline', pipeline_id=pipeline.id) }}">
+          <button type="submit"
+                  class="rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-500 disabled:opacity-70"
+                  {% if not can_retrigger %}disabled aria-disabled="true"{% endif %}>
+            Re-trigger pipeline
+          </button>
+        </form>
+        <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium {{ pipeline.status_class }}">
+          {{ pipeline.status }}
+        </span>
+      </div>
     </div>
 
     <dl class="mt-4 grid gap-3 sm:grid-cols-2 text-sm text-slate-700">

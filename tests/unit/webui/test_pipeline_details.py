@@ -117,3 +117,77 @@ def test_download_job_mismatch_returns_404(
         f"/ui/pipelines/{pipeline_one}/jobs/{job_in_other_pipeline}/download"
     )
     assert response.status_code == 404
+
+
+def test_retry_pipeline_creates_new_run(
+    app_and_store: tuple[Flask, SQLiteStore],
+) -> None:
+    app, store = app_and_store
+    pipeline_id = store.create_pipeline(
+        repo="demo/repo",
+        commit_sha="abcdef1",
+        branch="main",
+        workflow_name="rerun_flow",
+        config_path=".popsicle/ci.yml",
+        start_time="2024-03-01T12:00:00Z",
+    )
+    store.update_pipeline_status(pipeline_id, "failure", end_time="2024-03-01T12:05:00Z")
+    store.create_job(pipeline_id, "build")
+
+    client = app.test_client()
+    response = client.post(f"/ui/pipelines/{pipeline_id}/retry")
+    assert response.status_code == 302
+
+    orchestrator = app.config["TEST_ORCHESTRATOR"]
+    assert orchestrator.calls, "Expected orchestrator to be invoked"
+    new_pipeline_id, config, workspace = orchestrator.calls[0]
+    assert new_pipeline_id != pipeline_id
+    assert config.name == "rerun_flow"
+    assert workspace.exists()
+
+    clone_calls = app.config["TEST_CLONE_CALLS"]
+    assert clone_calls
+    clone_url, _, commit_sha, branch = clone_calls[0]
+    assert clone_url.startswith("https://github.com/")
+    assert commit_sha == "abcdef1"
+    assert branch == "main"
+
+    reporter = app.config["TEST_REPORTER"]
+    assert any(call[2] == new_pipeline_id for call in reporter.pending)
+
+    new_pipeline = store.get_pipeline(new_pipeline_id)
+    assert new_pipeline is not None
+    assert new_pipeline.repo == "demo/repo"
+    assert new_pipeline.config_path == ".popsicle/ci.yml"
+
+    jobs = store.get_jobs_for_pipeline(new_pipeline_id)
+    assert [job.job_name for job in jobs] == ["build"]
+
+    expected_redirect = f"/ui/pipelines/{new_pipeline_id}"
+    assert response.headers["Location"].endswith(expected_redirect)
+
+
+def test_retry_pipeline_rejects_running_pipeline(
+    app_and_store: tuple[Flask, SQLiteStore],
+) -> None:
+    app, store = app_and_store
+    pipeline_id = store.create_pipeline(
+        repo="demo/repo",
+        commit_sha="abcdef2",
+        branch="main",
+        workflow_name="rerun_flow",
+        config_path=".popsicle/ci.yml",
+        start_time="2024-03-02T10:00:00Z",
+    )
+    store.update_pipeline_status(pipeline_id, "running")
+
+    client = app.test_client()
+    response = client.post(
+        f"/ui/pipelines/{pipeline_id}/retry", follow_redirects=True
+    )
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Wait until it finishes" in html
+
+    orchestrator = app.config["TEST_ORCHESTRATOR"]
+    assert not orchestrator.calls

@@ -41,25 +41,6 @@ def create_app(
     background_runner: BackgroundRunner | None = None,
 ) -> Flask:
     """Create and configure the Flask application."""
-
-    app = Flask(__name__)
-    db_store = store or SQLiteStore()
-    reporter = status_reporter or GitHubStatusReporter()
-    pipeline_orchestrator = orchestrator or PipelineOrchestrator(
-        db_store, status_reporter=reporter
-    )
-    if orchestrator is not None:
-        pipeline_orchestrator.status_reporter = reporter
-    config_loader = config_loader or load_pipeline_config
-
-    workspace_base = Path(
-        workspace_root or os.getenv("POPSICLE_WORKSPACE_ROOT", "workspaces")
-    ).resolve()
-    workspace_base.mkdir(parents=True, exist_ok=True)
-    app.config.setdefault("WORKSPACE_ROOT", workspace_base)
-
-    token = os.getenv("POPSICLE_GITHUB_TOKEN")
-
     def perform_clone(
         repo_url: str, destination: Path, commit: str, branch: str
     ) -> None:
@@ -71,11 +52,35 @@ def create_app(
             token=token,
         )
 
+    app = Flask(__name__)
+    db_store = store or SQLiteStore()
+    reporter = status_reporter or GitHubStatusReporter()
+    pipeline_orchestrator = orchestrator or PipelineOrchestrator(
+        db_store, status_reporter=reporter
+    )
     clone_fn = git_clone or perform_clone
+    if orchestrator is not None:
+        pipeline_orchestrator.status_reporter = reporter
+    config_loader = config_loader or load_pipeline_config
+
+    workspace_base = Path(
+        workspace_root or os.getenv("POPSICLE_WORKSPACE_ROOT", "workspaces")
+    ).resolve()
+    workspace_base.mkdir(parents=True, exist_ok=True)
     runner = background_runner or _spawn_thread
 
     register_api_routes(app, db_store)
     register_ui(app, db_store)
+
+    app.config.setdefault("WORKSPACE_ROOT", workspace_base)
+    app.config.setdefault("POPSICLE_ORCHESTRATOR", pipeline_orchestrator)
+    app.config.setdefault("POPSICLE_STATUS_REPORTER", reporter)
+    app.config.setdefault("POPSICLE_CLONE_FN", clone_fn)
+    app.config.setdefault("POPSICLE_CONFIG_LOADER", config_loader)
+    app.config.setdefault("POPSICLE_BACKGROUND_RUNNER", runner)
+
+    token = os.getenv("POPSICLE_GITHUB_TOKEN")
+
 
     @app.get("/health")
     def health_check() -> tuple[dict[str, str], int]:
